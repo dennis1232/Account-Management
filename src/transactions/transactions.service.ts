@@ -153,8 +153,6 @@ export class TransactionsService {
     return { data, total, page, limit };
   }
 
-  // ─── Private helpers ────────────────────────────────────────────────────────
-
   private async checkIdempotency(
     tx: Prisma.TransactionClient,
     key: string,

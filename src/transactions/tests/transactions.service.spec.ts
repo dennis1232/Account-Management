@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -101,6 +102,40 @@ describe('TransactionsService', () => {
       await expect(service.deposit('uuid-1', { value: 100 })).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('returns cached transaction on idempotency key replay', async () => {
+      txClient.$queryRaw.mockResolvedValue([mockAccount()]);
+      const cached = mockTx(TransactionType.DEPOSIT, 100);
+      txClient.transaction.findUnique.mockResolvedValue(cached);
+
+      const result = await service.deposit('uuid-1', { value: 100 }, 'key-abc');
+
+      expect(result).toEqual(cached);
+      expect(txClient.account.update).not.toHaveBeenCalled();
+      expect(txClient.transaction.create).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when idempotency key reused with different account', async () => {
+      txClient.$queryRaw.mockResolvedValue([mockAccount()]);
+      txClient.transaction.findUnique.mockResolvedValue(
+        mockTx(TransactionType.DEPOSIT, 100),
+      );
+
+      await expect(
+        service.deposit('different-account', { value: 100 }, 'key-abc'),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('throws ConflictException when idempotency key reused with different operation type', async () => {
+      txClient.$queryRaw.mockResolvedValue([mockAccount()]);
+      txClient.transaction.findUnique.mockResolvedValue(
+        mockTx(TransactionType.WITHDRAWAL, 100),
+      );
+
+      await expect(
+        service.deposit('uuid-1', { value: 100 }, 'key-abc'),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
