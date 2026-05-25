@@ -25,7 +25,7 @@ Banking REST API built with **NestJS**, **Prisma**, and **PostgreSQL**.
 ## Quick Start (Docker)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/dennis1232/Account-Management.git
 cd account-management-api
 
 docker compose up --build
